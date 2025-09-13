@@ -11,10 +11,24 @@ from src.common.utils.i18n import get_user_language
 
 
 def check_if_token_reply(_: Callable[..., Any], __: Client, message: Message) -> bool:
-    return bool(
-        message.reply_to_message.text == get_user_language(message)('reply_with_token')
-        and re.search(r'^\d{8,20}:[A-Za-z0-9_-]{35}$', message.text)
-    )
+    if not message.reply_to_message or not message.text:
+        return False
+    
+    # Check if the reply is to the token request message
+    reply_text = message.reply_to_message.text or ""
+    expected_text = get_user_language(message)('reply_with_token')
+    
+    # Only check if the reply text matches the expected token request text
+    if reply_text != expected_text:
+        return False
+    
+    # Check if the message text matches bot token format
+    token_match = re.search(r'^\d{8,20}:[A-Za-z0-9_-]{35}$', message.text.strip())
+    
+    if token_match:
+        print(f"[DEBUG] Valid token reply detected: {message.text}")
+    
+    return bool(token_match)
 
 
 def check_if_custom_message_reply(_: Callable[..., Any], __: Client, message: Message) -> bool:

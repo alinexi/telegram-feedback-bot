@@ -13,7 +13,7 @@ from src.builder.db.crud import get_user
 F = TypeVar('F', bound=Callable[..., Any])
 
 locales_dir = Path(__file__).parent.parent.parent / 'i18n/locales'
-languages = json.loads((locales_dir.parent / 'languages.json').read_text())
+languages = json.loads((locales_dir.parent / 'languages.json').read_text(encoding='utf-8'))
 plate: Plate = Plate(root=str(locales_dir), fallback='en_US')
 
 

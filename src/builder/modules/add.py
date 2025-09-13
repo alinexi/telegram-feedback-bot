@@ -40,16 +40,24 @@ async def add(_: Client, update: CallbackQuery, i18n: Plate) -> None:
 @tg_exceptions_handler
 @localize
 async def handle_token(_: Client, message: Message, i18n: Plate) -> None:
-    old_bot_id: int = int(message.text.split(':')[0])
-    old_bot: Client | None = BOTS.get(old_bot_id)
+    print(f"[DEBUG] Token handler called for message: {message.text}")
+    print(f"[DEBUG] Processing token: {message.text}")
+    
+    bot_token = message.text.strip()
+    bot_id = get_bot_id(bot_token)
+    print(f"[DEBUG] Bot ID: {bot_id}")
+    
+    old_bot: Client | None = BOTS.get(bot_id)
     if old_bot:
+        print(f"[DEBUG] Stopping old bot: {bot_id}")
         await old_bot.stop()
+    
     reply_message = await message.reply_to_message.reply_text(
         i18n('checking_token'), reply_to_message_id=message.reply_to_message.id
     )
-    bot_token = message.text.strip()
-    bot_id = get_bot_id(bot_token)
+    
     bot_obj: Bot | None = get_bot(bot_id)
+    print(f"[DEBUG] Bot object from DB: {bot_obj}")
     async with Client(
         str(bot_id),
         api_id=API_ID,
@@ -100,6 +108,22 @@ async def handle_token(_: Client, message: Message, i18n: Plate) -> None:
             i18n('bot_already_added'),
             reply_markup=get_main_menu_keyboard(i18n),
         )
+        # Start the bot even if it was already added
+        if not NEW_BOT_ADMIN_APPROVAL:
+            new_bot = Client(
+                str(bot_id),
+                api_id=API_ID,
+                api_hash=API_HASH,
+                bot_token=bot_token,
+                plugins={'root': f'{package_name}.bot.modules'},
+                parse_mode=ParseMode.HTML,
+                workdir=DATA_DIR,
+            )
+            create_db(bot_id)
+            await new_bot.start()
+            if old_bot:
+                del BOTS[old_bot_id]
+            BOTS.update({bot_id: new_bot})
         return
     if not NEW_BOT_ADMIN_APPROVAL:
         new_bot = Client(
